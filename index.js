@@ -108,6 +108,6 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ضع توكن البوت الخاص بك هنا بالأسفل بالكامل لتشغيل المشروع
-const TOKEN = 'MTUyOTIxMjI5MTAyNTg2MjcwNw.GyAumW.6onvBgNUXiIkrY8NzeUPvQemfMYb6UNh9hvMC0'; 
+// ضع توكن البوت اضع_توكن_البوت_هنالخاص بك هنا بالأسفل بالكامل لتشغيل المشروع
+const TOKEN = process.env.TOKEN || 'MTUyOTIxMjI5MTAyNTg2MjcwNw.GH9yKW.WYKVlYLDVOFJeBJIPKZQBNyibfdkOQ6bQUOTAM'; 
 client.login(TOKEN);

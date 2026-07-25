@@ -109,5 +109,5 @@ client.on('messageCreate', async (message) => {
 });
 
 // ضع توكن البوت اضع_توكن_البوت_هنالخاص بك هنا بالأسفل بالكامل لتشغيل المشروع
-const TOKEN = process.env.TOKEN || 'MTUyOTIxMjI5MTAyNTg2MjcwNw.GH9yKW.WYKVlYLDVOFJeBJIPKZQBNyibfdkOQ6bQUOTAM'; 
+const TOKEN = process.env.TOKEN; 
 client.login(TOKEN);

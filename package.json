@@ -1,0 +1,12 @@
+{
+  "name": "avatar-banner-bot",
+  "version": "1.0.0",
+  "description": "Discord Avatar and Banner Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1"
+  }
+}

@@ -11,14 +11,20 @@ const client = new Client({
 // ذاكرة ذكية ومؤقتة لحفظ الروابط بشكل آمن لمنع أخطاء ديسكورد
 const linksStorage = new Map();
 
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي الفوري بدون أوامر
+const AUTO_CHANNELS = [
+    '1530724201819013131', 
+    '1530724352243404941',
+    '1530724806754963456'
+];
+
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الذاكرة الذكية والأزرار الدائمة بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
     
     // استقبال ضغطات الأزرار الدائمة 24 ساعة
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
 
-        // 1. التحقق من زر التنزيل
         if (interaction.customId.startsWith('download_')) {
             await interaction.deferReply({ ephemeral: true });
 
@@ -26,7 +32,7 @@ client.once('ready', () => {
             const data = linksStorage.get(uniqueKey);
 
             if (!data) {
-                return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية (قد يكون البوت قد أعاد التشغيل مؤخراً).' });
+                return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية.' });
             }
 
             await interaction.editReply({
@@ -34,8 +40,6 @@ client.once('ready', () => {
                 files: [data.avatar, data.banner]
             });
         } 
-        
-        // 2. التحقق من زر الحذف
         else if (interaction.customId.startsWith('delete_')) {
             const ownerId = interaction.customId.replace('delete_', '');
 
@@ -51,25 +55,24 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    if (message.content.startsWith('!دمج')) {
+    // 🌟 الميزة التلقائية: إذا أرسل العضو أي صور داخل الشنلات الثلاثة المحددة
+    if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
-        if (attachments.length < 2) {
-            return message.reply('❌ من فضلك أرسل صورتين مع الأمر (الصورة الأولى للافتار والثانية للبنر)!');
-        }
+        // إذا أرسل العضو أقل من صورتين، نتجاهل الرسالة تماماً
+        if (attachments.length < 2) return;
 
-        // قراءة الصور بشكل منفصل وصحيح وثابت 100%
+        // حذف رسالة العضو الأصلية فوراً لتنظيف وتنسيق الشنل
+        await message.delete().catch(() => {});
+
+        // التعديل السليم 100% لقراءة الصور بالترتيب للـ GIF والصور العادية
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 
         try {
-            // تصميم الإمبيد الطولي الفخم لدمج البنر والافتار المتحركين سوا
             const embed = new EmbedBuilder()
-                .setColor('#111214') // لون ثيم ديسكورد الأسود الجديد لإخفاء الحواف
-                .setAuthor({ 
-                    name: `👤 الملف الشخصي لـ ${message.author.username}`, 
-                    iconURL: avatarUrl 
-                })
+                .setColor('#111214')
+                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: avatarUrl })
                 .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
                 .setImage(bannerUrl);
 
@@ -78,36 +81,18 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage(avatarUrl);
 
-            // توليد مفتاح قصير وفريد للزر (أقل من 100 حرف لمنع الأخطاء)
             const uniqueKey = `${message.author.id}-${Date.now()}`;
-            
-            // حفظ الروابط بالذاكرة
             linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
-            // ربط المفتاح القصير بالأزرار الدائمة (هنا تم التصحيح بالملي)
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`download_${uniqueKey}`)
-                    .setEmoji('📥')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId(`delete_${message.author.id}`)
-                    .setEmoji('🗑️')
-                    .setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
-            await message.reply({
-                embeds: [embed, avatarEmbed],
-                components: [row]
-            });
-
-        } catch (error) {
-            console.error(error);
-            message.reply('❌ حدث خطأ غير متوقع، تأكد من الملفات المرفوعة.');
-        }
+            await message.channel.send({ embeds: [embed, avatarEmbed], components: [row] });
+        } catch (error) { console.error(error); }
     }
 });
 
-// ضع توكن البوت اضع_توكن_البوت_هنالخاص بك هنا بالأسفل بالكامل لتشغيل المشروع
 const TOKEN = process.env.TOKEN; 
 client.login(TOKEN);

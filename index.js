@@ -32,21 +32,29 @@ client.once('ready', () => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    // 1. زر التنزيل المصلح لإظهار الصور مباشرة بالكامل
+    // 1. زر التنزيل المصلح بالملي لإظهار الصور كـ Attachments متحركة
     if (interaction.customId.startsWith('dl_')) {
         await interaction.deferReply({ ephemeral: true });
 
-        // تفكيك الروابط المشفرة من معرف الزر نفسه
-        const [_, avatarEncoded, bannerEncoded] = interaction.customId.split('_');
-        const avatarUrl = Buffer.from(avatarEncoded, 'base64').toString('utf-8');
-        const bannerUrl = Buffer.from(bannerEncoded, 'base64').toString('utf-8');
+        try {
+            // تفكيك الروابط المشفرة من معرف الزر نفسه لمنع ضياع الذاكرة
+            const [_, avatarEncoded, bannerEncoded] = interaction.customId.split('_');
+            const avatarUrl = Buffer.from(avatarEncoded, 'base64').toString('utf-8');
+            const bannerUrl = Buffer.from(bannerEncoded, 'base64').toString('utf-8');
 
-        // ✅ التعديل الذهبي: إرسال الصور مباشرة لتظهر وتتحرك في الشات بدلاً من روابط ملفات مغلقة
-        await interaction.editReply({
-            content: `**الافتار والبنر الأصليين جاهزان بكامل حركتهما وجودتهما:**\n🔹 **الافتار:** ${avatarUrl}\n🔸 **البنر:** ${bannerUrl}`
-        }).catch(() => {
+            // تحويل الروابط إلى ملفات مرفقة حقيقية لكي تظهر كصور متحركة داخل الرسالة المخفية بالملي
+            const dlAvatar = new AttachmentBuilder(avatarUrl, { name: 'download_avatar.gif' });
+            const dlBanner = new AttachmentBuilder(bannerUrl, { name: 'download_banner.gif' });
+
+            // ✅ التعديل الأسطوري: إرسال الصور كملفات حقيقية لتظهر تحت بعضها وتتحرك فوراً بالشات
+            await interaction.editReply({
+                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
+                files: [dlAvatar, dlBanner]
+            });
+        } catch (error) {
+            console.error(error);
             interaction.editReply({ content: '❌ تعذر تحميل الملفات الأصلية، قد تكون حُذفت من خوادم ديسكورد.' });
-        });
+        }
     } 
     // 2. زر الحذف الذكي
     else if (interaction.customId.startsWith('delete_')) {
@@ -91,7 +99,7 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage('attachment://avatar.gif');
 
-            // تشفير ذكي وقصير للروابط داخل معرف الزر لحمايتها للأبد
+            // تشفير ذكي وقصير للروابط داخل معرف الزر لحمايتها للأبد من الضياع
             const avatarKey = Buffer.from(avatarUrl).toString('base64').substring(0, 35);
             const bannerKey = Buffer.from(bannerUrl).toString('base64').substring(0, 35);
 

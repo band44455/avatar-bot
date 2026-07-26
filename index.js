@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 
 const client = new Client({
     intents: [
@@ -8,10 +8,9 @@ const client = new Client({
     ]
 });
 
-// ذاكرة ذكية ومؤقتة لحفظ الروابط بشكل آمن لمنع أخطاء ديسكورد
 const linksStorage = new Map();
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي الفوري بدون أوامر
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -19,9 +18,8 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل المصلح بنجاح: ${client.user.tag}`);
     
-    // استقبال ضغطات الأزرار الدائمة 24 ساعة
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
 
@@ -55,42 +53,50 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // 🌟 الميزة التلقائية: إذا أرسل العضو أي صور داخل الشنلات الثلاثة المحددة
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
-        // إذا أرسل العضو أقل من صورتين، نتجاهل الرسالة تماماً
         if (attachments.length < 2) return;
 
-        // حذف رسالة العضو الأصلية فوراً لتنظيف وتنسيق الشنل
-        await message.delete().catch(() => {});
-
-        // التعديل السليم 100% لقراءة الصور بالترتيب للـ GIF والصور العادية
-        const avatarUrl = attachments[0].url;
-        const bannerUrl = attachments[1].url;
+        // تأجيل الحذف ثانية واحدة لضمان قراءة الملفات بامتياز
+        setTimeout(async () => {
+            await message.delete().catch(() => {});
+        }, 1000);
 
         try {
+            // حل المشكلة: جلب وتحضير الملفات المرفوعة كـ Attachments حقيقية داخل ديسكورد
+            const avatarFile = new AttachmentBuilder(attachments[0].url, { name: 'avatar.gif' });
+            const bannerFile = new AttachmentBuilder(attachments[1].url, { name: 'banner.gif' });
+
             const embed = new EmbedBuilder()
                 .setColor('#111214')
-                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: avatarUrl })
+                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: 'attachment://avatar.gif' })
                 .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
-                .setImage(bannerUrl);
+                .setImage('attachment://banner.gif');
 
             const avatarEmbed = new EmbedBuilder()
                 .setColor('#111214')
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
-                .setImage(avatarUrl);
+                .setImage('attachment://avatar.gif');
 
             const uniqueKey = `${message.author.id}-${Date.now()}`;
-            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
+            linksStorage.set(uniqueKey, { avatar: attachments[0].url, banner: attachments[1].url });
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
-            await message.channel.send({ embeds: [embed, avatarEmbed], components: [row] });
-        } catch (error) { console.error(error); }
+            // إرسال الإمبيد مدمجاً معه الملفات المرفوعة مباشرة لتظهر وتتحرك فوراً
+            await message.channel.send({ 
+                embeds: [embed, avatarEmbed], 
+                files: [avatarFile, bannerFile],
+                components: [row] 
+            });
+
+        } catch (error) { 
+            console.error(error); 
+        }
     }
 });
 

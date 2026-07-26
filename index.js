@@ -32,18 +32,18 @@ client.once('ready', () => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    // 1. زر التنزيل الدائم للأبد
+    // 1. زر التنزيل المصلح لإظهار الصور مباشرة بالكامل
     if (interaction.customId.startsWith('dl_')) {
         await interaction.deferReply({ ephemeral: true });
 
-        // حل المشكلة: تفكيك الروابط المخزنة داخل معرف الزر نفسه لمنع ضياعها
+        // تفكيك الروابط المشفرة من معرف الزر نفسه
         const [_, avatarEncoded, bannerEncoded] = interaction.customId.split('_');
         const avatarUrl = Buffer.from(avatarEncoded, 'base64').toString('utf-8');
         const bannerUrl = Buffer.from(bannerEncoded, 'base64').toString('utf-8');
 
+        // ✅ التعديل الذهبي: إرسال الصور مباشرة لتظهر وتتحرك في الشات بدلاً من روابط ملفات مغلقة
         await interaction.editReply({
-            content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
-            files: [avatarUrl, bannerUrl]
+            content: `**الافتار والبنر الأصليين جاهزان بكامل حركتهما وجودتهما:**\n🔹 **الافتار:** ${avatarUrl}\n🔸 **البنر:** ${bannerUrl}`
         }).catch(() => {
             interaction.editReply({ content: '❌ تعذر تحميل الملفات الأصلية، قد تكون حُذفت من خوادم ديسكورد.' });
         });
@@ -91,7 +91,7 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage('attachment://avatar.gif');
 
-            // تشفير الروابط وحفظها داخل معرف الزر لحمايتها للأبد (بحد أقصى 100 حرف)
+            // تشفير ذكي وقصير للروابط داخل معرف الزر لحمايتها للأبد
             const avatarKey = Buffer.from(avatarUrl).toString('base64').substring(0, 35);
             const bannerKey = Buffer.from(bannerUrl).toString('base64').substring(0, 35);
 

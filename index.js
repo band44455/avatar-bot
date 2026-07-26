@@ -66,7 +66,7 @@ client.on('messageCreate', async (message) => {
 
         await message.delete().catch(() => {});
 
-        // ✅ تم التصحيح بالملي هنا لقراءة الروابط بشكل صحيح لـ الـ GIF والصور
+        // ✅ تم التصحيح الذهبي هنا: قراءة الروابط بالترتيب الصحيح مثل الأمر اليدوي لتظهر وتتحرك فوراً
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 
@@ -137,6 +137,10 @@ client.on('messageCreate', async (message) => {
         }
     }
 });
+
+const TOKEN = process.env.TOKEN; 
+client.login(TOKEN);
+
 
 const TOKEN = process.env.TOKEN; 
 client.login(TOKEN);

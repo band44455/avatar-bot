@@ -15,6 +15,9 @@ http.createServer((req, res) => {
     res.end('Bot is running online 24/7!\n');
 }).listen(process.env.PORT || 3000);
 
+// ذاكرة ذكية وثابتة لحفظ روابط الصور الأصلية بكفاءة عالية ومنع ضياعها
+const linksStorage = new Map();
+
 // 👑 الآي دي حق حسابك الشخصي لتكون الوحيد الذي يستخدم أمر !دمج اليدوي
 const OWNER_ID = '919532578500259850'; 
 
@@ -26,35 +29,28 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل الناجح: ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    // 1. زر التنزيل المصلح بالملي لإظهار الصور كـ Attachments متحركة
-    if (interaction.customId.startsWith('dl_')) {
+    // 1. زر التنزيل الأصلي والمضمون لعرض الصور كاملة ومكشوفة
+    if (interaction.customId.startsWith('download_')) {
         await interaction.deferReply({ ephemeral: true });
 
-        try {
-            // تفكيك الروابط المشفرة من معرف الزر نفسه لمنع ضياع الذاكرة
-            const [_, avatarEncoded, bannerEncoded] = interaction.customId.split('_');
-            const avatarUrl = Buffer.from(avatarEncoded, 'base64').toString('utf-8');
-            const bannerUrl = Buffer.from(bannerEncoded, 'base64').toString('utf-8');
+        const uniqueKey = interaction.customId.replace('download_', '');
+        const data = linksStorage.get(uniqueKey);
 
-            // تحويل الروابط إلى ملفات مرفقة حقيقية لكي تظهر كصور متحركة داخل الرسالة المخفية بالملي
-            const dlAvatar = new AttachmentBuilder(avatarUrl, { name: 'download_avatar.gif' });
-            const dlBanner = new AttachmentBuilder(bannerUrl, { name: 'download_banner.gif' });
-
-            // ✅ التعديل الأسطوري: إرسال الصور كملفات حقيقية لتظهر تحت بعضها وتتحرك فوراً بالشات
-            await interaction.editReply({
-                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
-                files: [dlAvatar, dlBanner]
-            });
-        } catch (error) {
-            console.error(error);
-            interaction.editReply({ content: '❌ تعذر تحميل الملفات الأصلية، قد تكون حُذفت من خوادم ديسكورد.' });
+        if (!data) {
+            return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية (جرب ارفع صور جديدة بالشنل).' });
         }
+
+        // إرسال الروابط الأصلية المباشرة كملفات لتظهر وتتحرك فوراً بالشات نفس النسخة الأولى بالضبط
+        await interaction.editReply({
+            content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
+            files: [data.avatar, data.banner]
+        }).catch(() => {});
     } 
     // 2. زر الحذف الذكي
     else if (interaction.customId.startsWith('delete_')) {
@@ -99,12 +95,12 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage('attachment://avatar.gif');
 
-            // تشفير ذكي وقصير للروابط داخل معرف الزر لحمايتها للأبد من الضياع
-            const avatarKey = Buffer.from(avatarUrl).toString('base64').substring(0, 35);
-            const bannerKey = Buffer.from(bannerUrl).toString('base64').substring(0, 35);
+            // حفظ الروابط بذاكرة السيرفر باستخدام مفتاح فريد
+            const uniqueKey = `${message.author.id}-${Date.now()}`;
+            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`dl_${avatarKey}_${bannerKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
@@ -145,11 +141,11 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage(avatarUrl);
 
-            const avatarKey = Buffer.from(avatarUrl).toString('base64').substring(0, 35);
-            const bannerKey = Buffer.from(bannerUrl).toString('base64').substring(0, 35);
+            const uniqueKey = `${message.author.id}-${Date.now()}`;
+            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`dl_${avatarKey}_${bannerKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 

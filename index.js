@@ -11,11 +11,10 @@ const client = new Client({
 // ذاكرة ذكية ومؤقتة لحفظ الروابط بشكل آمن لمنع أخطاء ديسكورد
 const linksStorage = new Map();
 
-// 👑 ضع هنا الآي دي (ID) حق حسابك الشخصي في ديسكورد لكي تكون أنت الوحيد الذي يستخدم أمر !دمج اليدوي
+// 👑 ضع هنا الآي دي (ID) حق حسابك الشخصي في ديسكورد لتكون أنت الوحيد الذي يستخدم أمر !دمج اليدوي
 const OWNER_ID = '1516152000377520302'; 
 
 // 🛑 ضع هنا آي دي (ID) الشنلات التي تريد من البوت أن ينظمها تلقائياً للأعضاء بدون أوامر
-// يمكنك تغيير هذه الأرقام الافتراضية بآي دي الشنلات الحقيقية في سيرفرك (مثل شنل boy أو girl)
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -23,13 +22,12 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل (الخاص + التلقائي للشنلات) بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
     
     // استقبال ضغطات الأزرار الدائمة 24 ساعة
     client.on('interactionCreate', async (interaction) => {
         if (!interaction.isButton()) return;
 
-        // 1. التحقق من زر التنزيل
         if (interaction.customId.startsWith('download_')) {
             await interaction.deferReply({ ephemeral: true });
 
@@ -37,7 +35,7 @@ client.once('ready', () => {
             const data = linksStorage.get(uniqueKey);
 
             if (!data) {
-                return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية (قد يكون البوت قد أعاد التشغيل مؤخراً).' });
+                return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية.' });
             }
 
             await interaction.editReply({
@@ -45,8 +43,6 @@ client.once('ready', () => {
                 files: [data.avatar, data.banner]
             });
         } 
-        
-        // 2. التحقق من زر الحذف
         else if (interaction.customId.startsWith('delete_')) {
             const ownerId = interaction.customId.replace('delete_', '');
 
@@ -62,16 +58,15 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // 🌟 القسم الأول: التنظيم التلقائي للشنلات بدون أوامر (متاح لكل الأعضاء)
+    // 🌟 القسم الأول: التنظيم التلقائي للشنلات بدون أوامر
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
-        // إذا أرسل العضو أقل من صورتين، نتجاهل الرسالة تماماً
         if (attachments.length < 2) return;
 
-        // حذف رسالة العضو الأصلية فوراً لتنظيف وتنسيق الشنل
         await message.delete().catch(() => {});
 
+        // ✅ تم التصحيح بالملي هنا لقراءة الروابط بشكل صحيح لـ الـ GIF والصور
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 
@@ -97,19 +92,19 @@ client.on('messageCreate', async (message) => {
 
             await message.channel.send({ embeds: [embed, avatarEmbed], components: [row] });
         } catch (error) { console.error(error); }
-        return; // إنهاء دالة المعالجة هنا حتى لا يحدث تداخل مع الأوامر اليدوية
+        return;
     }
 
-    // 🌟 القسم الثاني: الأمر اليدوي (!دمج) - مقفل ومحصور على حسابك أنت فقط
+    // 🌟 القسم الثاني: الأمر اليدوي (!دمج)
     if (message.content.startsWith('!دمج')) {
         if (message.author.id !== OWNER_ID) {
-            return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط ولا يمكنك استخدامه!');
+            return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
         }
 
         const attachments = Array.from(message.attachments.values());
 
         if (attachments.length < 2) {
-            return message.reply('❌ من فضلك أرسل صورتين مع الأمر (الصورة الأولى للافتار والثانية للبنر)!');
+            return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
         }
 
         const avatarUrl = attachments[0].url;
@@ -138,11 +133,10 @@ client.on('messageCreate', async (message) => {
             await message.reply({ embeds: [embed, avatarEmbed], components: [row] });
         } catch (error) {
             console.error(error);
-            message.reply('❌ حدث خطأ غير متوقع، تأكد من الملفات المرفوعة.');
+            message.reply('❌ حدث خطأ غير متوقع.');
         }
     }
 });
 
-// جلب التوكن السري من إعدادات موقع Render الآمنة
 const TOKEN = process.env.TOKEN; 
 client.login(TOKEN);

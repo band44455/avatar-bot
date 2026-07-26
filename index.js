@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
+const http = require('http'); // 🌟 سطر سحري لفتح سيرفر وهمي لتخطي خطأ Render
 
 const client = new Client({
     intents: [
@@ -8,7 +9,12 @@ const client = new Client({
     ]
 });
 
-// ذاكرة ذكية ومؤقتة لحفظ الروابط بشكل آمن لمنع أخطاء ديسكورد
+// 🌟 فتح بورت وهمي لإقناع موقع Render أن البوت عبارة عن موقع ويب شغال ولا يطفئه أبداً
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running online 24/7!\n');
+}).listen(process.env.PORT || 3000);
+
 const linksStorage = new Map();
 
 // 👑 ضع هنا الآي دي (ID) حق حسابك الشخصي في ديسكورد لتكون أنت الوحيد الذي يستخدم أمر !دمج اليدوي
@@ -25,7 +31,6 @@ client.once('ready', () => {
     console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
 });
 
-// استقبال ضغطات الأزرار الدائمة 24 ساعة
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
@@ -40,7 +45,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         await interaction.editReply({
-            content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهماودقتهما:**',
+            content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
             files: [data.avatar, data.banner]
         });
     } 
@@ -58,20 +63,18 @@ client.on('interactionCreate', async (interaction) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // 🌟 القسم الأول: التنظيم التلقائي للشنلات بدون أوامر
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
         if (attachments.length < 2) return;
 
-        // تأجيل الحذف ثانية واحدة لضمان قراءة الملفات بامتياز
         setTimeout(async () => {
             await message.delete().catch(() => {});
         }, 1000);
 
         try {
-            const avatarFile = new AttachmentBuilder(attachments[0].url, { name: 'avatar.gif' });
-            const bannerFile = new AttachmentBuilder(attachments[1].url, { name: 'banner.gif' });
+            const avatarFile = new AttachmentBuilder(attachments.url, { name: 'avatar.gif' });
+            const bannerFile = new AttachmentBuilder(attachments.url, { name: 'banner.gif' });
 
             const embed = new EmbedBuilder()
                 .setColor('#111214')
@@ -85,7 +88,7 @@ client.on('messageCreate', async (message) => {
                 .setImage('attachment://avatar.gif');
 
             const uniqueKey = `${message.author.id}-${Date.now()}`;
-            linksStorage.set(uniqueKey, { avatar: attachments[0].url, banner: attachments[1].url });
+            linksStorage.set(uniqueKey, { avatar: attachments.url, banner: attachments.url });
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
@@ -98,13 +101,10 @@ client.on('messageCreate', async (message) => {
                 components: [row] 
             });
 
-        } catch (error) { 
-            console.error(error); 
-        }
+        } catch (error) { console.error(error); }
         return;
     }
 
-    // 🌟 القسم الثاني: الأمر اليدوي (!دمج)
     if (message.content.startsWith('!دمج')) {
         if (message.author.id !== OWNER_ID) {
             return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
@@ -116,8 +116,8 @@ client.on('messageCreate', async (message) => {
             return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
         }
 
-        const avatarUrl = attachments[0].url;
-        const bannerUrl = attachments[1].url;
+        const avatarUrl = attachments.url;
+        const bannerUrl = attachments.url;
 
         try {
             const embed = new EmbedBuilder()

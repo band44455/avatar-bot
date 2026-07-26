@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
-const http = require('http'); // 🌟 سطر سحري لفتح سيرفر وهمي لتخطي خطأ Render
+const http = require('http'); // 🌟 سطر سحري لفتح سيرفر وهمي لتخطي خطأ الإغلاق الفجائي في Render
 
 const client = new Client({
     intents: [
@@ -17,10 +17,10 @@ http.createServer((req, res) => {
 
 const linksStorage = new Map();
 
-// 👑 ضع هنا الآي دي (ID) حق حسابك الشخصي في ديسكورد لتكون أنت الوحيد الذي يستخدم أمر !دمج اليدوي
+// 👑 الآي دي (ID) حق حسابك الشخصي لتكون أنت الوحيد الذي يستخدم أمر !دمج اليدوي
 const OWNER_ID = '919532578500259850'; 
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي الفوري بدون أوامر
+// 🛑 آي دي الشنلات الحقيقية الثلاثة الخاصة بسيرفرك للتنظيم التلقائي الفوري بدون أوامر
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -63,6 +63,7 @@ client.on('interactionCreate', async (interaction) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    // 🌟 القسم الأول: التنظيم التلقائي للشنلات بدون أوامر
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
@@ -73,8 +74,9 @@ client.on('messageCreate', async (message) => {
         }, 1000);
 
         try {
-            const avatarFile = new AttachmentBuilder(attachments.url, { name: 'avatar.gif' });
-            const bannerFile = new AttachmentBuilder(attachments.url, { name: 'banner.gif' });
+            // ✅ تم تصحيح طريقة رفع الصور كملفات حقيقية لتظهر وتتحرك بالشنل التلقائي فوراً
+            const avatarFile = new AttachmentBuilder(attachments[0].url, { name: 'avatar.gif' });
+            const bannerFile = new AttachmentBuilder(attachments[1].url, { name: 'banner.gif' });
 
             const embed = new EmbedBuilder()
                 .setColor('#111214')
@@ -88,7 +90,7 @@ client.on('messageCreate', async (message) => {
                 .setImage('attachment://avatar.gif');
 
             const uniqueKey = `${message.author.id}-${Date.now()}`;
-            linksStorage.set(uniqueKey, { avatar: attachments.url, banner: attachments.url });
+            linksStorage.set(uniqueKey, { avatar: attachments[0].url, banner: attachments[1].url });
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
@@ -105,6 +107,7 @@ client.on('messageCreate', async (message) => {
         return;
     }
 
+    // 🌟 القسم الثاني: الأمر اليدوي (!دمج)
     if (message.content.startsWith('!دمج')) {
         if (message.author.id !== OWNER_ID) {
             return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
@@ -116,8 +119,8 @@ client.on('messageCreate', async (message) => {
             return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
         }
 
-        const avatarUrl = attachments.url;
-        const bannerUrl = attachments.url;
+        const avatarUrl = attachments[0].url;
+        const bannerUrl = attachments[1].url;
 
         try {
             const embed = new EmbedBuilder()

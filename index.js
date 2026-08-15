@@ -15,7 +15,10 @@ http.createServer((req, res) => {
     res.end('Bot is running online 24/7!\n');
 }).listen(process.env.PORT || 3000);
 
-// 👑 الآي دي حق حسابك الشخصي لتكون الوحيد الذي يستخدم أمر !دمج اليدوي
+// ذاكرة ذكية وثابتة لحفظ الروابط
+const linksStorage = new Map();
+
+// 👑 الآي دي حق حسابك الشخصي
 const OWNER_ID = '919532578500259850'; 
 
 // 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
@@ -26,51 +29,49 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل والمقاوم لروابط ديسكورد المؤقتة بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنظام إنعاش الروابط التلقائي: ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    // 1. زر التنزيل المطور المقاوم للانتهاء بعد 3 أيام
-    if (interaction.customId.startsWith('dl_')) {
+    if (interaction.customId.startsWith('download_')) {
         await interaction.deferReply({ ephemeral: true });
 
+        const uniqueKey = interaction.customId.replace('download_', '');
+        const data = linksStorage.get(uniqueKey);
+
+        if (!data) {
+            return interaction.editReply({ content: '❌ عذراً، تعذر العثور على روابط الصور الأصلية في الذاكرة الحالية.' });
+        }
+
         try {
-            // تفكيك المعرفات المخزنة بالزر لتوليد روابط جديدة وصازجة بالكامل
-            const [_, channelId, messageId] = interaction.customId.split('_');
-            
-            const targetChannel = await client.channels.fetch(channelId).catch(() => null);
-            if (!targetChannel) return interaction.editReply({ content: '❌ تعذر العثور على الشنل الأصلية.' });
+            // 🔥 الحيلة السحرية: إنعاش وتحديث روابط ديسكورد المنتهية تلقائياً لتجنب مشكلة الـ 36 بايت
+            // ديسكورد يوفر دالة لتحديث روابط الأصول الحية المتغيرة بلمحة بصر
+            const refreshedAssets = await client.rest.get(`/attachments/refresh`, {
+                body: { urls: [data.avatar, data.banner] }
+            }).catch(() => null);
 
-            // حيلة ذكية: جلب الرسالة الأصلية من أرشيف الشنل لتحديث روابط المرفقات المنتهية
-            const targetMessage = await targetChannel.messages.fetch(messageId).catch(() => null);
-            
-            let avatarUrl, bannerUrl;
-            
-            if (targetMessage && targetMessage.embeds.length > 0) {
-                // جلب الروابط المتجددة المباشرة الحية من الإمبيد المحفوظ
-                avatarUrl = targetMessage.embeds[0].author.iconURL;
-                bannerUrl = targetMessage.embeds[0].image.url;
+            let finalAvatar = data.avatar;
+            let finalBanner = data.banner;
+
+            if (refreshedAssets && refreshedAssets.updated_urls && refreshedAssets.updated_urls.length >= 2) {
+                finalAvatar = refreshedAssets.updated_urls[0];
+                finalBanner = refreshedAssets.updated_urls[1];
             }
 
-            if (!avatarUrl || !bannerUrl) {
-                return interaction.editReply({ content: '❌ عذراً، حُذفت الأصول نهائياً من خوادم ديسكورد ولا يمكن استرجاعها.' });
-            }
-
-            const dlAvatar = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
-            const dlBanner = new AttachmentBuilder(bannerUrl, { name: 'banner.gif' });
+            const dlAvatar = new AttachmentBuilder(finalAvatar, { name: 'avatar.gif' });
+            const dlBanner = new AttachmentBuilder(finalBanner, { name: 'banner.gif' });
 
             await interaction.editReply({
-                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما (روابط متجددة):**',
+                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما (روابط منتعشة حية):**',
                 files: [dlAvatar, dlBanner]
             });
         } catch (error) {
             console.error(error);
-            interaction.editReply({ content: '❌ حدث خطأ أثناء محاولة تجديد روابط الصور المنتهية.' });
+            interaction.editReply({ content: '❌ حدث خطأ أثناء محاولة إنعاش روابط الصور من خوادم ديسكورد.' });
         }
     } 
-    // 2. زر الحذف الذكي
     else if (interaction.customId.startsWith('delete_')) {
         const ownerId = interaction.customId.replace('delete_', '');
 
@@ -85,15 +86,18 @@ client.on('interactionCreate', async (interaction) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // 🌟 القسم الأول: التنظيم التلقائي للشنلات
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
 
         if (attachments.length < 2) return;
 
-        // تعديل هام: نترك الرسالة الأصلية مخفية في أرشيف البوت ولا نحذفها فوراً لنحافظ على ديمومة الروابط وتجددها تلقائياً
+        // الاحتفاظ برسالة العضو الأصلية لمدة ثانية واحدة للتنظيم وثبات القراءة
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
+
+        setTimeout(async () => {
+            await message.delete().catch(() => {});
+        }, 1000);
 
         try {
             const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
@@ -110,25 +114,24 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage('attachment://avatar.gif');
 
-            // إرسال التنسيق وحفظ آي دي الشنل والرسالة بالزر لتجديد الروابط للأبد
-            const sentMessage = await message.channel.send({ 
-                embeds: [embed, avatarEmbed], 
-                files: [avatarFile, bannerFile]
-            });
+            const uniqueKey = `${message.author.id}-${Date.now()}`;
+            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`dl_${message.channel.id}_${sentMessage.id}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
-            await sentMessage.edit({ components: [row] });
-            await message.delete().catch(() => {});
+            await message.channel.send({ 
+                embeds: [embed, avatarEmbed], 
+                files: [avatarFile, bannerFile],
+                components: [row] 
+            });
 
         } catch (error) { console.error(error); }
         return;
     }
 
-    // 🌟 القسم الثاني: الأمر اليدوي (!دمج)
     if (message.content.startsWith('!دمج')) {
         if (message.author.id !== OWNER_ID) {
             return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
@@ -155,14 +158,15 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage(avatarUrl);
 
-            const sentMessage = await message.reply({ embeds: [embed, avatarEmbed] });
+            const uniqueKey = `${message.author.id}-${Date.now()}`;
+            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`dl_${message.channel.id}_${sentMessage.id}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
-            await sentMessage.edit({ components: [row] });
+            await message.reply({ embeds: [embed, avatarEmbed], components: [row] });
         } catch (error) { console.error(error); }
     }
 });

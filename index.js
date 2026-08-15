@@ -46,7 +46,6 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         try {
-            // إرسال الصور الأصلية مباشرة بكامل حركتها وجودتها الفخمة
             const dlAvatar = new AttachmentBuilder(data.avatar, { name: 'avatar.gif' });
             const dlBanner = new AttachmentBuilder(data.banner, { name: 'banner.gif' });
 
@@ -61,7 +60,6 @@ client.on('interactionCreate', async (interaction) => {
     } 
     else if (interaction.customId.startsWith('delete_')) {
         const ownerId = interaction.customId.replace('delete_', '');
-
         if (interaction.user.id === ownerId) {
             await interaction.message.delete().catch(() => {});
         } else {
@@ -75,10 +73,8 @@ client.on('messageCreate', async (message) => {
 
     if (AUTO_CHANNELS.includes(message.channel.id)) {
         const attachments = Array.from(message.attachments.values());
-
         if (attachments.length < 2) return;
 
-        // قراءة الصور بالترتيب
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 
@@ -112,21 +108,14 @@ client.on('messageCreate', async (message) => {
             });
 
             await message.delete().catch(() => {});
-
         } catch (error) { console.error(error); }
         return;
     }
 
     if (message.content.startsWith('!دمج')) {
-        if (message.author.id !== OWNER_ID) {
-            return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
-        }
-
+        if (message.author.id !== OWNER_ID) return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
         const attachments = Array.from(message.attachments.values());
-
-        if (attachments.length < 2) {
-            return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
-        }
+        if (attachments.length < 2) return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
 
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
@@ -156,5 +145,5 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-const TOKEN = process.env.TOKEN; 
-client.login(TOKEN);
+// قراءة التوكن بأمان من متغيرات البيئة المخفية لمنع الحرق التلقائي 🛡️
+client.login(process.env.TOKEN);

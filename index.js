@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ApplicationCommandType } = require('discord.js');
 const http = require('http');
 
 const client = new Client({
@@ -17,92 +17,106 @@ http.createServer((req, res) => {
 
 const linksStorage = new Map();
 
-// 👑 الآي دي (ID) حق حسابك الشخصي الحقيقي
-const OWNER_ID = '919532578500259850'; 
-
-client.once('ready', () => {
-    console.log(`🚀 تم تشغيل البوت بنظام القراءة المفتوح المتوافق مع التطبيقات: ${client.user.tag}`);
+client.once('ready', async () => {
+    console.log(`🚀 تم تشغيل البوت بنظام دمج التطبيقات الذكي: ${client.user.tag}`);
+    
+    // تسجيل أمر سياق الرسائل غصب عن أنظمة الحجب في ديسكورد لتشتغل الميزة فوراً كـ APP
+    await client.application.commands.set([
+        {
+            name: 'دمج الصور الفخم',
+            type: ApplicationCommandType.Message
+        }
+    ]).catch(console.error);
 });
 
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
+    // 1. تشغيل أمر الدمج الذكي من الماوس (Context Menu)
+    if (interaction.isMessageContextMenuCommand()) {
+        if (interaction.commandName === 'دمج الصور الفخم') {
+            await interaction.deferReply({ ephemeral: false });
 
-    if (interaction.customId.startsWith('download_')) {
-        await interaction.deferReply({ ephemeral: true });
+            const targetMessage = interaction.targetMessage;
+            const attachments = Array.from(targetMessage.attachments.values());
 
-        const uniqueKey = interaction.customId.replace('download_', '');
-        const data = linksStorage.get(uniqueKey);
+            if (attachments.length < 2) {
+                return interaction.editReply({ content: '❌ خطأ: هذه الرسالة لا تحتوي على صورتين معاً (الافتار والبنر)!' });
+            }
 
-        if (!data) {
-            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور من خوادم ديسكورد.' });
-        }
+            const avatarUrl = attachments[0].url;
+            const bannerUrl = attachments[1].url;
 
-        try {
-            const dlAvatar = new AttachmentBuilder(data.avatar, { name: 'avatar.gif' });
-            const dlBanner = new AttachmentBuilder(data.banner, { name: 'banner.gif' });
+            try {
+                const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
+                const bannerFile = new AttachmentBuilder(bannerUrl, { name: 'banner.gif' });
 
-            await interaction.editReply({
-                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
-                files: [dlAvatar, dlBanner]
-            });
-        } catch (error) {
-            console.error(error);
-            interaction.editReply({ content: '❌ حدث خطأ أثناء جلب الصور.' });
-        }
-    } 
-    else if (interaction.customId.startsWith('delete_')) {
-        const ownerId = interaction.customId.replace('delete_', '');
-        if (interaction.user.id === ownerId) {
-            await interaction.message.delete().catch(() => {});
-        } else {
-            await interaction.reply({ content: '❌ لا يمكنك حذف هذه المعاينة لأنك لست صاحب الأمر!', ephemeral: true });
+                const embed = new EmbedBuilder()
+                    .setColor('#111214')
+                    .setAuthor({ name: `👤 الملف الشخصي لـ ${targetMessage.author.username}`, iconURL: 'attachment://avatar.gif' })
+                    .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
+                    .setImage('attachment://banner.gif');
+
+                const avatarEmbed = new EmbedBuilder()
+                    .setColor('#111214')
+                    .setDescription(`**[\` الافتار الشخصي \`]**`)
+                    .setImage('attachment://avatar.gif');
+
+                const uniqueKey = `${targetMessage.author.id}-${Date.now()}`;
+                linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId(`delete_${targetMessage.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
+                );
+
+                await interaction.editReply({ 
+                    embeds: [embed, avatarEmbed], 
+                    files: [avatarFile, bannerFile],
+                    components: [row] 
+                });
+
+                // مسح رسالة الصور القديمة لتنظيف الشنل الفخم
+                await targetMessage.delete().catch(() => {});
+
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply({ content: '❌ حدث خطأ برميجي أثناء دمج الملفات المرفقة.' });
+            }
         }
     }
-});
 
-// دالة ذكية لمعالجة الرسائل والملفات المرفقة غصب عن نظام التقييد
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+    // 2. أزرار التحميل والحذف الذكية
+    if (interaction.isButton()) {
+        if (interaction.customId.startsWith('download_')) {
+            await interaction.deferReply({ ephemeral: true });
 
-    const attachments = Array.from(message.attachments.values());
+            const uniqueKey = interaction.customId.replace('download_', '');
+            const data = linksStorage.get(uniqueKey);
 
-    if (attachments.length >= 2 || message.content.startsWith('!دمج')) {
-        if (attachments.length < 2) return message.reply('❌ من فضلك ارفع صورتين معاً (الافتار والبنر)!');
+            if (!data) {
+                return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور من خوادم ديسكورد.' });
+            }
 
-        const avatarUrl = attachments[0].url;
-        const bannerUrl = attachments[1].url;
+            try {
+                const dlAvatar = new AttachmentBuilder(data.avatar, { name: 'avatar.gif' });
+                const dlBanner = new AttachmentBuilder(data.banner, { name: 'banner.gif' });
 
-        try {
-            const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
-            const bannerFile = new AttachmentBuilder(bannerUrl, { name: 'banner.gif' });
-
-            const embed = new EmbedBuilder()
-                .setColor('#111214')
-                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: 'attachment://avatar.gif' })
-                .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
-                .setImage('attachment://banner.gif');
-
-            const avatarEmbed = new EmbedBuilder()
-                .setColor('#111214')
-                .setDescription(`**[\` الافتار الشخصي \`]**`)
-                .setImage('attachment://avatar.gif');
-
-            const uniqueKey = `${message.author.id}-${Date.now()}`;
-            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
-            );
-
-            await message.channel.send({ 
-                embeds: [embed, avatarEmbed], 
-                files: [avatarFile, bannerFile],
-                components: [row] 
-            });
-
-            await message.delete().catch(() => {});
-        } catch (error) { console.error(error); }
+                await interaction.editReply({
+                    content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما التامة:**',
+                    files: [dlAvatar, dlBanner]
+                });
+            } catch (error) {
+                console.error(error);
+                interaction.editReply({ content: '❌ حدث خطأ أثناء تحميل الصور.' });
+            }
+        } 
+        else if (interaction.customId.startsWith('delete_')) {
+            const ownerId = interaction.customId.replace('delete_', '');
+            if (interaction.user.id === ownerId) {
+                await interaction.message.delete().catch(() => {});
+            } else {
+                await interaction.reply({ content: '❌ لا يمكنك حذف هذه المعاينة لأنك لست صاحب الأمر!', ephemeral: true });
+            }
+        }
     }
 });
 

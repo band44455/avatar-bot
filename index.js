@@ -18,10 +18,10 @@ http.createServer((req, res) => {
 // ذاكرة ذكية وثابتة لحفظ الروابط بشكل آمن لزر التحميل
 const linksStorage = new Map();
 
-// 👑 الآي دي (ID) حق حسابك الشخصي
+// 👑 الآي دي (ID) حق حسابك الشخصي الحقيقي
 const OWNER_ID = '919532578500259850'; 
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي (محدثة بالملي ✨)
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -78,6 +78,7 @@ client.on('messageCreate', async (message) => {
 
         if (attachments.length < 2) return;
 
+        // قراءة الصور بالترتيب
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 

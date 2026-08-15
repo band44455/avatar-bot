@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ApplicationCommandType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ApplicationCommandOptionType } = require('discord.js');
 const http = require('http');
 
 const client = new Client({
@@ -18,32 +18,42 @@ http.createServer((req, res) => {
 const linksStorage = new Map();
 
 client.once('ready', async () => {
-    console.log(`🚀 تم تشغيل البوت بنظام دمج التطبيقات الذكي: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل البوت بنظام الأمر المائل الذكي للتطبيقات: ${client.user.tag}`);
     
-    // تسجيل أمر سياق الرسائل غصب عن أنظمة الحجب في ديسكورد لتشتغل الميزة فوراً كـ APP
+    // تسجيل الأمر المائل المباشر ليعمل كـ APP في السيرفر كاملاً
     await client.application.commands.set([
         {
-            name: 'دمج الصور الفخم',
-            type: ApplicationCommandType.Message
+            name: 'دمج',
+            description: 'دمج الافتار والبنر المسموحين بالتنسيق الطولي الفخم',
+            options: [
+                {
+                    name: 'الافتار',
+                    description: 'ارفع صورة الافتار الشخصي الشخصي هنا',
+                    type: ApplicationCommandOptionType.Attachment,
+                    required: true
+                },
+                {
+                    name: 'البنر',
+                    description: 'ارفع صورة البنر المتحرك أو الثابت هنا',
+                    type: ApplicationCommandOptionType.Attachment,
+                    required: true
+                }
+            ]
         }
     ]).catch(console.error);
 });
 
 client.on('interactionCreate', async (interaction) => {
-    // 1. تشغيل أمر الدمج الذكي من الماوس (Context Menu)
-    if (interaction.isMessageContextMenuCommand()) {
-        if (interaction.commandName === 'دمج الصور الفخم') {
+    // 1. تشغيل الأمر المائل المطور /دمج
+    if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'دمج') {
             await interaction.deferReply({ ephemeral: false });
 
-            const targetMessage = interaction.targetMessage;
-            const attachments = Array.from(targetMessage.attachments.values());
+            const avatarAttachment = interaction.options.getAttachment('الافتار');
+            const bannerAttachment = interaction.options.getAttachment('البنر');
 
-            if (attachments.length < 2) {
-                return interaction.editReply({ content: '❌ خطأ: هذه الرسالة لا تحتوي على صورتين معاً (الافتار والبنر)!' });
-            }
-
-            const avatarUrl = attachments[0].url;
-            const bannerUrl = attachments[1].url;
+            const avatarUrl = avatarAttachment.url;
+            const bannerUrl = bannerAttachment.url;
 
             try {
                 const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
@@ -51,7 +61,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 const embed = new EmbedBuilder()
                     .setColor('#111214')
-                    .setAuthor({ name: `👤 الملف الشخصي لـ ${targetMessage.author.username}`, iconURL: 'attachment://avatar.gif' })
+                    .setAuthor({ name: `👤 الملف الشخصي لـ ${interaction.user.username}`, iconURL: 'attachment://avatar.gif' })
                     .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
                     .setImage('attachment://banner.gif');
 
@@ -60,12 +70,12 @@ client.on('interactionCreate', async (interaction) => {
                     .setDescription(`**[\` الافتار الشخصي \`]**`)
                     .setImage('attachment://avatar.gif');
 
-                const uniqueKey = `${targetMessage.author.id}-${Date.now()}`;
+                const uniqueKey = `${interaction.user.id}-${Date.now()}`;
                 linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`delete_${targetMessage.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
+                    new ButtonBuilder().setCustomId(`delete_${interaction.user.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
                 );
 
                 await interaction.editReply({ 
@@ -74,9 +84,6 @@ client.on('interactionCreate', async (interaction) => {
                     components: [row] 
                 });
 
-                // مسح رسالة الصور القديمة لتنظيف الشنل الفخم
-                await targetMessage.delete().catch(() => {});
-
             } catch (error) {
                 console.error(error);
                 await interaction.editReply({ content: '❌ حدث خطأ برميجي أثناء دمج الملفات المرفقة.' });
@@ -84,7 +91,7 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // 2. أزرار التحميل والحذف الذكية
+    // 2. أزرار التحميل والحذف الذكية للأبد
     if (interaction.isButton()) {
         if (interaction.customId.startsWith('download_')) {
             await interaction.deferReply({ ephemeral: true });

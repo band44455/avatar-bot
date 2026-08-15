@@ -9,19 +9,18 @@ const client = new Client({
     ]
 });
 
-// فتح بورت وهمي لحماية البوت من الإغلاق في Render ليبقى صاحي 24 ساعة
+// فتح بورت وهمي ثابت لحماية البوت من الإغلاق في Render
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot is running online 24/7!\n');
 }).listen(process.env.PORT || 3000);
 
-// ذاكرة ذكية وثابتة لحفظ الروابط بشكل آمن لزر التحميل
 const linksStorage = new Map();
 
 // 👑 الآي دي (ID) حق حسابك الشخصي الحقيقي
 const OWNER_ID = '919532578500259850'; 
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي (محدثة بالملي ✨)
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -29,7 +28,7 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح وبأعلى كفاءة استقرار: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -42,7 +41,7 @@ client.on('interactionCreate', async (interaction) => {
         const data = linksStorage.get(uniqueKey);
 
         if (!data) {
-            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور من خوادم ديسكورد بعد مرور الأيام (ارفع صور جديدة بالشنل).' });
+            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور.' });
         }
 
         try {
@@ -55,7 +54,7 @@ client.on('interactionCreate', async (interaction) => {
             });
         } catch (error) {
             console.error(error);
-            interaction.editReply({ content: '❌ حدث خطأ أثناء جلب الصور من السيرفر.' });
+            interaction.editReply({ content: '❌ حدث خطأ أثناء جلب الصور.' });
         }
     } 
     else if (interaction.customId.startsWith('delete_')) {

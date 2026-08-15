@@ -20,15 +20,8 @@ const linksStorage = new Map();
 // 👑 الآي دي (ID) حق حسابك الشخصي الحقيقي
 const OWNER_ID = '919532578500259850'; 
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
-const AUTO_CHANNELS = [
-    '1530724201819013131', 
-    '1530724352243404941',
-    '1530724806754963456'
-];
-
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل البوت بنظام القراءة المفتوح المتوافق مع التطبيقات: ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -41,7 +34,7 @@ client.on('interactionCreate', async (interaction) => {
         const data = linksStorage.get(uniqueKey);
 
         if (!data) {
-            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور.' });
+            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور من خوادم ديسكورد.' });
         }
 
         try {
@@ -67,12 +60,14 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// دالة ذكية لمعالجة الرسائل والملفات المرفقة غصب عن نظام التقييد
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    if (AUTO_CHANNELS.includes(message.channel.id)) {
-        const attachments = Array.from(message.attachments.values());
-        if (attachments.length < 2) return;
+    const attachments = Array.from(message.attachments.values());
+
+    if (attachments.length >= 2 || message.content.startsWith('!دمج')) {
+        if (attachments.length < 2) return message.reply('❌ من فضلك ارفع صورتين معاً (الافتار والبنر)!');
 
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
@@ -108,41 +103,8 @@ client.on('messageCreate', async (message) => {
 
             await message.delete().catch(() => {});
         } catch (error) { console.error(error); }
-        return;
-    }
-
-    if (message.content.startsWith('!دمج')) {
-        if (message.author.id !== OWNER_ID) return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
-        const attachments = Array.from(message.attachments.values());
-        if (attachments.length < 2) return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
-
-        const avatarUrl = attachments[0].url;
-        const bannerUrl = attachments[1].url;
-
-        try {
-            const embed = new EmbedBuilder()
-                .setColor('#111214')
-                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: avatarUrl })
-                .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
-                .setImage(bannerUrl);
-
-            const avatarEmbed = new EmbedBuilder()
-                .setColor('#111214')
-                .setDescription(`**[\` الافتار الشخصي \`]**`)
-                .setImage(avatarUrl);
-
-            const uniqueKey = `${message.author.id}-${Date.now()}`;
-            linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`download_${uniqueKey}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
-            );
-
-            await message.reply({ embeds: [embed, avatarEmbed], components: [row] });
-        } catch (error) { console.error(error); }
     }
 });
 
-// قراءة التوكن بأمان من متغيرات البيئة المخفية لمنع الحرق التلقائي 🛡️
-client.login(process.env.TOKEN);
+const TOKEN = process.env.TOKEN; 
+client.login(TOKEN);

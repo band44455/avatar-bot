@@ -9,19 +9,19 @@ const client = new Client({
     ]
 });
 
-// فتح بورت وهمي ثابت لحماية البوت من الإغلاق في Render
+// فتح بورت وهمي لحماية البوت من الإغلاق في Render ليبقى صاحي 24 ساعة
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot is running online 24/7!\n');
 }).listen(process.env.PORT || 3000);
 
-// ذاكرة سحابية ثابتة ومحمية لا تتأثر بمرور الأيام
+// ذاكرة ذكية وثابتة لحفظ الروابط بشكل آمن لزر التحميل
 const linksStorage = new Map();
 
-// 👑 الآي دي حق حسابك الشخصي
+// 👑 الآي دي (ID) حق حسابك الشخصي
 const OWNER_ID = '919532578500259850'; 
 
-// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
 const AUTO_CHANNELS = [
     '1530724201819013131', 
     '1530724352243404941',
@@ -29,7 +29,7 @@ const AUTO_CHANNELS = [
 ];
 
 client.once('ready', () => {
-    console.log(`🚀 تم تشغيل بوت الدمج الشامل الثابت والنهائي بنجاح: ${client.user.tag}`);
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل بنجاح وبأعلى كفاءة استقرار: ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -42,21 +42,21 @@ client.on('interactionCreate', async (interaction) => {
         const data = linksStorage.get(uniqueKey);
 
         if (!data) {
-            return interaction.editReply({ content: '❌ عذراً، تعذر العثور على أصول هذه الصور في الذاكرة الحالية (ارفع صور جديدة بالشنل).' });
+            return interaction.editReply({ content: '❌ عذراً، انتهت صلاحية روابط هذه الصور من خوادم ديسكورد بعد مرور الأيام (ارفع صور جديدة بالشنل).' });
         }
 
         try {
-            // جلب الأصول المباشرة كملفات وإعادة إرسالها بشكل مكشوف ومتحرك بالكامل للأبد
+            // إرسال الصور الأصلية مباشرة بكامل حركتها وجودتها الفخمة
             const dlAvatar = new AttachmentBuilder(data.avatar, { name: 'avatar.gif' });
             const dlBanner = new AttachmentBuilder(data.banner, { name: 'banner.gif' });
 
             await interaction.editReply({
-                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما التامة:**',
+                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما:**',
                 files: [dlAvatar, dlBanner]
             });
         } catch (error) {
             console.error(error);
-            interaction.editReply({ content: '❌ حدث خطأ أثناء تحميل الصور من خوادم ديسكورد.' });
+            interaction.editReply({ content: '❌ حدث خطأ أثناء جلب الصور من السيرفر.' });
         }
     } 
     else if (interaction.customId.startsWith('delete_')) {
@@ -78,8 +78,8 @@ client.on('messageCreate', async (message) => {
 
         if (attachments.length < 2) return;
 
-        const avatarUrl = attachments.url;
-        const bannerUrl = attachments.url;
+        const avatarUrl = attachments[0].url;
+        const bannerUrl = attachments[1].url;
 
         try {
             const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
@@ -97,7 +97,6 @@ client.on('messageCreate', async (message) => {
                 .setImage('attachment://avatar.gif');
 
             const uniqueKey = `${message.author.id}-${Date.now()}`;
-            // حفظ الروابط بالذاكرة الثابتة لحمايتها للأبد
             linksStorage.set(uniqueKey, { avatar: avatarUrl, banner: bannerUrl });
 
             const row = new ActionRowBuilder().addComponents(
@@ -111,7 +110,6 @@ client.on('messageCreate', async (message) => {
                 components: [row] 
             });
 
-            // مسح رسالة العضو فوراً بعد الإرسال الناجح لتنظيف الروم
             await message.delete().catch(() => {});
 
         } catch (error) { console.error(error); }
@@ -129,8 +127,8 @@ client.on('messageCreate', async (message) => {
             return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
         }
 
-        const avatarUrl = attachments.url;
-        const bannerUrl = attachments.url;
+        const avatarUrl = attachments[0].url;
+        const bannerUrl = attachments[1].url;
 
         try {
             const embed = new EmbedBuilder()

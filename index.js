@@ -64,9 +64,8 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
     // لقط المرفقات تلقائياً من أي شات بالسيرفر غصب عن نظام التقييد 🛡️
-    const attachments = Array.from(message.attachments.values());
-
-    if (attachments.length >= 2) {
+    if (message.attachments.size >= 2) {
+        const attachments = Array.from(message.attachments.values());
         const avatarUrl = attachments[0].url;
         const bannerUrl = attachments[1].url;
 

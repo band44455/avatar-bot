@@ -1,18 +1,5 @@
-const {
-    Client,
-    GatewayIntentBits,
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    AttachmentBuilder
-} = require('discord.js');
-
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const http = require('http');
-
-// =========================
-// Discord Client
-// =========================
 
 const client = new Client({
     intents: [
@@ -22,511 +9,163 @@ const client = new Client({
     ]
 });
 
-// =========================
-// Settings
-// =========================
+// فتح بورت وهمي لإقناع موقع Render أن البوت عبارة عن موقع ويب شغال ولا يطفئه أبداً
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running online 24/7!\n');
+}).listen(process.env.PORT || 3000);
 
-const OWNER_ID = '919532578500259850';
+// 👑 الآي دي حق حسابك الشخصي لتكون الوحيد الذي يستخدم أمر !دمج اليدوي
+const OWNER_ID = '919532578500259850'; 
 
+// 🛑 آي دي الشنلات الحقيقية الخاصة بسيرفرك للتنظيم التلقائي
 const AUTO_CHANNELS = [
-    '1530724201819013131',
+    '1530724201819013131', 
     '1530724352243404941',
     '1530724806754963456'
 ];
 
-const TOKEN = process.env.TOKEN;
-
-// =========================
-// Render Web Server
-// =========================
-
-const PORT = process.env.PORT || 10000;
-
-const server = http.createServer((req, res) => {
-    res.writeHead(200, {
-        'Content-Type': 'text/plain; charset=utf-8'
-    });
-
-    res.end('Discord Bot is running!\n');
-});
-
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌐 Web server started successfully on port ${PORT}`);
-});
-
-// =========================
-// Discord Debug
-// =========================
-
-client.on('debug', (info) => {
-    // لا نطبع معلومات حساسة كاملة
-    if (
-        info.includes('Provided token') ||
-        info.includes('Authorization')
-    ) {
-        console.log('🔐 Discord Debug: Token provided');
-        return;
-    }
-
-    console.log(`🔎 Discord Debug: ${info}`);
-});
-
-client.on('warn', (info) => {
-    console.log(`⚠️ Discord Warning: ${info}`);
-});
-
-client.on('error', (error) => {
-    console.error('❌ Discord Client Error:');
-    console.error(error);
-});
-
-client.on('shardError', (error) => {
-    console.error('❌ Discord Gateway Error:');
-    console.error(error);
-});
-
-client.on('shardDisconnect', (event, shardId) => {
-    console.log(`🔌 Discord disconnected. Shard: ${shardId}`);
-    console.log(event);
-});
-
-client.on('shardReconnecting', (shardId) => {
-    console.log(`🔄 Discord reconnecting... Shard: ${shardId}`);
-});
-
-client.on('shardReady', (shardId) => {
-    console.log(`✅ Discord shard ${shardId} is ready!`);
-});
-
-// =========================
-// Bot Ready
-// =========================
-
 client.once('ready', () => {
-    console.log('====================================');
-    console.log('🤖 DISCORD BOT CONNECTED SUCCESSFULLY');
-    console.log(`👤 Bot: ${client.user.tag}`);
-    console.log(`🆔 Bot ID: ${client.user.id}`);
-    console.log(`🏠 Servers: ${client.guilds.cache.size}`);
-    console.log('====================================');
+    console.log(`🚀 تم تشغيل بوت الدمج الشامل والمقاوم لروابط ديسكورد المؤقتة بنجاح: ${client.user.tag}`);
 });
-
-// =========================
-// Buttons
-// =========================
 
 client.on('interactionCreate', async (interaction) => {
-
     if (!interaction.isButton()) return;
 
-    // =========================
-    // Download Button
-    // =========================
-
+    // 1. زر التنزيل المطور المقاوم للانتهاء بعد 3 أيام
     if (interaction.customId.startsWith('dl_')) {
-
-        await interaction.deferReply({
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
 
         try {
+            // تفكيك المعرفات المخزنة بالزر لتوليد روابط جديدة وصازجة بالكامل
+            const [_, channelId, messageId] = interaction.customId.split('_');
+            
+            const targetChannel = await client.channels.fetch(channelId).catch(() => null);
+            if (!targetChannel) return interaction.editReply({ content: '❌ تعذر العثور على الشنل الأصلية.' });
 
-            const parts = interaction.customId.split('_');
-
-            if (parts.length < 3) {
-                return interaction.editReply({
-                    content: '❌ بيانات زر التحميل غير صحيحة.'
-                });
+            // حيلة ذكية: جلب الرسالة الأصلية من أرشيف الشنل لتحديث روابط المرفقات المنتهية
+            const targetMessage = await targetChannel.messages.fetch(messageId).catch(() => null);
+            
+            let avatarUrl, bannerUrl;
+            
+            if (targetMessage && targetMessage.embeds.length > 0) {
+                // جلب الروابط المتجددة المباشرة الحية من الإمبيد المحفوظ
+                avatarUrl = targetMessage.embeds[0].author.iconURL;
+                bannerUrl = targetMessage.embeds[0].image.url;
             }
 
-            const channelId = parts[1];
-            const messageId = parts[2];
-
-            const targetChannel = await client.channels
-                .fetch(channelId)
-                .catch(() => null);
-
-            if (!targetChannel) {
-                return interaction.editReply({
-                    content: '❌ تعذر العثور على الشنل.'
-                });
+            if (!avatarUrl || !bannerUrl) {
+                return interaction.editReply({ content: '❌ عذراً، حُذفت الأصول نهائياً من خوادم ديسكورد ولا يمكن استرجاعها.' });
             }
 
-            if (!targetChannel.isTextBased()) {
-                return interaction.editReply({
-                    content: '❌ هذه الشنل ليست نصية.'
-                });
-            }
-
-            const targetMessage = await targetChannel.messages
-                .fetch(messageId)
-                .catch(() => null);
-
-            if (!targetMessage) {
-                return interaction.editReply({
-                    content: '❌ تعذر العثور على رسالة المعاينة.'
-                });
-            }
-
-            const attachments = Array.from(
-                targetMessage.attachments.values()
-            );
-
-            if (attachments.length < 2) {
-
-                return interaction.editReply({
-                    content:
-                        '❌ لم أجد الافتار والبنر الأصليين في الرسالة.'
-                });
-            }
-
-            const avatarUrl = attachments[0].url;
-            const bannerUrl = attachments[1].url;
-
-            const avatarResponse = await fetch(avatarUrl);
-            const bannerResponse = await fetch(bannerUrl);
-
-            if (!avatarResponse.ok || !bannerResponse.ok) {
-                return interaction.editReply({
-                    content:
-                        '❌ تعذر تحميل الملفات الأصلية من Discord.'
-                });
-            }
-
-            const avatarBuffer = Buffer.from(
-                await avatarResponse.arrayBuffer()
-            );
-
-            const bannerBuffer = Buffer.from(
-                await bannerResponse.arrayBuffer()
-            );
-
-            const avatarFile = new AttachmentBuilder(
-                avatarBuffer,
-                {
-                    name: 'avatar.gif'
-                }
-            );
-
-            const bannerFile = new AttachmentBuilder(
-                bannerBuffer,
-                {
-                    name: 'banner.gif'
-                }
-            );
+            const dlAvatar = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
+            const dlBanner = new AttachmentBuilder(bannerUrl, { name: 'banner.gif' });
 
             await interaction.editReply({
-                content:
-                    '📥 **الافتار والبنر جاهزان للتحميل:**',
-                files: [
-                    avatarFile,
-                    bannerFile
-                ]
+                content: '**الافتار والبنر الأصليين جاهزان للتحميل بكامل حركتهما ودقتهما (روابط متجددة):**',
+                files: [dlAvatar, dlBanner]
             });
-
         } catch (error) {
-
-            console.error('❌ Download Error:', error);
-
-            if (interaction.deferred) {
-                await interaction.editReply({
-                    content:
-                        '❌ حدث خطأ أثناء تحميل الملفات.'
-                }).catch(() => {});
-            }
+            console.error(error);
+            interaction.editReply({ content: '❌ حدث خطأ أثناء محاولة تجديد روابط الصور المنتهية.' });
         }
-
-        return;
-    }
-
-    // =========================
-    // Delete Button
-    // =========================
-
-    if (interaction.customId.startsWith('delete_')) {
-
-        const ownerId =
-            interaction.customId.replace('delete_', '');
+    } 
+    // 2. زر الحذف الذكي
+    else if (interaction.customId.startsWith('delete_')) {
+        const ownerId = interaction.customId.replace('delete_', '');
 
         if (interaction.user.id === ownerId) {
-
-            await interaction.message
-                .delete()
-                .catch(() => {});
-
+            await interaction.message.delete().catch(() => {});
         } else {
-
-            await interaction.reply({
-                content:
-                    '❌ لا يمكنك حذف هذه المعاينة لأنك لست صاحب الأمر!',
-                ephemeral: true
-            }).catch(() => {});
+            await interaction.reply({ content: '❌ لا يمكنك حذف هذه المعاينة لأنك لست صاحب الأمر!', ephemeral: true });
         }
-
-        return;
     }
 });
 
-// =========================
-// Message Create
-// =========================
-
 client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-    try {
+    // 🌟 القسم الأول: التنظيم التلقائي للشنلات
+    if (AUTO_CHANNELS.includes(message.channel.id)) {
+        const attachments = Array.from(message.attachments.values());
 
-        if (message.author.bot) return;
+        if (attachments.length < 2) return;
 
-        // =========================
-        // Automatic Channels
-        // =========================
+        // تعديل هام: نترك الرسالة الأصلية مخفية في أرشيف البوت ولا نحذفها فوراً لنحافظ على ديمومة الروابط وتجددها تلقائياً
+        const avatarUrl = attachments[0].url;
+        const bannerUrl = attachments[1].url;
 
-        if (AUTO_CHANNELS.includes(message.channel.id)) {
-
-            const attachments =
-                Array.from(message.attachments.values());
-
-            if (attachments.length < 2) return;
-
-            const avatarUrl = attachments[0].url;
-            const bannerUrl = attachments[1].url;
-
-            const avatarResponse = await fetch(avatarUrl);
-            const bannerResponse = await fetch(bannerUrl);
-
-            if (!avatarResponse.ok || !bannerResponse.ok) {
-
-                console.error(
-                    '❌ Failed to download Discord attachments.'
-                );
-
-                return;
-            }
-
-            const avatarBuffer = Buffer.from(
-                await avatarResponse.arrayBuffer()
-            );
-
-            const bannerBuffer = Buffer.from(
-                await bannerResponse.arrayBuffer()
-            );
-
-            const avatarFile = new AttachmentBuilder(
-                avatarBuffer,
-                {
-                    name: 'avatar.gif'
-                }
-            );
-
-            const bannerFile = new AttachmentBuilder(
-                bannerBuffer,
-                {
-                    name: 'banner.gif'
-                }
-            );
+        try {
+            const avatarFile = new AttachmentBuilder(avatarUrl, { name: 'avatar.gif' });
+            const bannerFile = new AttachmentBuilder(bannerUrl, { name: 'banner.gif' });
 
             const embed = new EmbedBuilder()
                 .setColor('#111214')
-                .setAuthor({
-                    name:
-                        `👤 الملف الشخصي لـ ${message.author.username}`,
-                    iconURL:
-                        'attachment://avatar.gif'
-                })
-                .setDescription(
-                    '\u200b\n**[` البنر المتحرك `]**\n'
-                )
-                .setImage(
-                    'attachment://banner.gif'
-                );
+                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: 'attachment://avatar.gif' })
+                .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
+                .setImage('attachment://banner.gif');
 
             const avatarEmbed = new EmbedBuilder()
                 .setColor('#111214')
-                .setDescription(
-                    '**[` الافتار الشخصي `]**'
-                )
-                .setImage(
-                    'attachment://avatar.gif'
-                );
+                .setDescription(`**[\` الافتار الشخصي \`]**`)
+                .setImage('attachment://avatar.gif');
 
-            const sentMessage =
-                await message.channel.send({
-                    embeds: [
-                        embed,
-                        avatarEmbed
-                    ],
-                    files: [
-                        avatarFile,
-                        bannerFile
-                    ]
-                });
-
-            const row =
-                new ActionRowBuilder().addComponents(
-
-                    new ButtonBuilder()
-                        .setCustomId(
-                            `dl_${message.channel.id}_${sentMessage.id}`
-                        )
-                        .setEmoji('📥')
-                        .setStyle(
-                            ButtonStyle.Secondary
-                        ),
-
-                    new ButtonBuilder()
-                        .setCustomId(
-                            `delete_${message.author.id}`
-                        )
-                        .setEmoji('🗑️')
-                        .setStyle(
-                            ButtonStyle.Secondary
-                        )
-                );
-
-            await sentMessage.edit({
-                components: [row]
+            // إرسال التنسيق وحفظ آي دي الشنل والرسالة بالزر لتجديد الروابط للأبد
+            const sentMessage = await message.channel.send({ 
+                embeds: [embed, avatarEmbed], 
+                files: [avatarFile, bannerFile]
             });
 
-            await message.delete()
-                .catch(() => {});
-
-            console.log(
-                `✅ Auto merge completed for ${message.author.tag}`
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`dl_${message.channel.id}_${sentMessage.id}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
 
-            return;
+            await sentMessage.edit({ components: [row] });
+            await message.delete().catch(() => {});
+
+        } catch (error) { console.error(error); }
+        return;
+    }
+
+    // 🌟 القسم الثاني: الأمر اليدوي (!دمج)
+    if (message.content.startsWith('!دمج')) {
+        if (message.author.id !== OWNER_ID) {
+            return message.reply('❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!');
         }
 
-        // =========================
-        // Manual !دمج
-        // =========================
+        const attachments = Array.from(message.attachments.values());
 
-        if (message.content.startsWith('!دمج')) {
+        if (attachments.length < 2) {
+            return message.reply('❌ من فضلك أرسل صورتين مع الأمر!');
+        }
 
-            if (message.author.id !== OWNER_ID) {
+        const avatarUrl = attachments[0].url;
+        const bannerUrl = attachments[1].url;
 
-                await message.reply({
-                    content:
-                        '❌ هذا الأمر مخصص لصاحب البوت فقط!'
-                });
-
-                return;
-            }
-
-            const attachments =
-                Array.from(message.attachments.values());
-
-            if (attachments.length < 2) {
-
-                await message.reply({
-                    content:
-                        '❌ من فضلك أرسل صورتين مع الأمر!'
-                });
-
-                return;
-            }
-
-            const avatarUrl = attachments[0].url;
-            const bannerUrl = attachments[1].url;
-
+        try {
             const embed = new EmbedBuilder()
                 .setColor('#111214')
-                .setAuthor({
-                    name:
-                        `👤 الملف الشخصي لـ ${message.author.username}`,
-                    iconURL: avatarUrl
-                })
-                .setDescription(
-                    '\u200b\n**[` البنر المتحرك `]**\n'
-                )
+                .setAuthor({ name: `👤 الملف الشخصي لـ ${message.author.username}`, iconURL: avatarUrl })
+                .setDescription(`\u200b\n**[\` البنر المتحرك \`]**\n`)
                 .setImage(bannerUrl);
 
             const avatarEmbed = new EmbedBuilder()
                 .setColor('#111214')
-                .setDescription(
-                    '**[` الافتار الشخصي `]**'
-                )
+                .setDescription(`**[\` الافتار الشخصي \`]**`)
                 .setImage(avatarUrl);
 
-            const sentMessage =
-                await message.reply({
-                    embeds: [
-                        embed,
-                        avatarEmbed
-                    ]
-                });
+            const sentMessage = await message.reply({ embeds: [embed, avatarEmbed] });
 
-            const row =
-                new ActionRowBuilder().addComponents(
-
-                    new ButtonBuilder()
-                        .setCustomId(
-                            `dl_${message.channel.id}_${sentMessage.id}`
-                        )
-                        .setEmoji('📥')
-                        .setStyle(
-                            ButtonStyle.Secondary
-                        ),
-
-                    new ButtonBuilder()
-                        .setCustomId(
-                            `delete_${message.author.id}`
-                        )
-                        .setEmoji('🗑️')
-                        .setStyle(
-                            ButtonStyle.Secondary
-                        )
-                );
-
-            await sentMessage.edit({
-                components: [row]
-            });
-
-            console.log(
-                `✅ !دمج executed by ${message.author.tag}`
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`dl_${message.channel.id}_${sentMessage.id}`).setEmoji('📥').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId(`delete_${message.author.id}`).setEmoji('🗑️').setStyle(ButtonStyle.Secondary)
             );
-        }
 
-    } catch (error) {
-
-        console.error(
-            '❌ Message Handler Error:',
-            error
-        );
+            await sentMessage.edit({ components: [row] });
+        } catch (error) { console.error(error); }
     }
 });
 
-// =========================
-// Login
-// =========================
-
-if (!TOKEN) {
-
-    console.error(
-        '❌ ERROR: TOKEN غير موجود في Environment Variables في Render.'
-    );
-
-    process.exit(1);
-}
-
-console.log('🔑 TOKEN موجود: true');
-console.log('🔌 جاري الاتصال بـ Discord...');
-
-client.login(TOKEN)
-    .then(() => {
-
-        console.log(
-            '📡 Login request sent successfully.'
-        );
-
-    })
-    .catch((error) => {
-
-        console.error(
-            '❌ فشل تسجيل الدخول إلى Discord:'
-        );
-
-        console.error(error);
-
-        process.exit(1);
-    });
+const TOKEN = process.env.TOKEN; 
+client.login(TOKEN);

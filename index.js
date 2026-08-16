@@ -23,22 +23,6 @@ const client = new Client({
 });
 
 // =========================
-// Render Web Server
-// =========================
-
-const PORT = process.env.PORT || 3000;
-
-http.createServer((req, res) => {
-    res.writeHead(200, {
-        'Content-Type': 'text/plain'
-    });
-
-    res.end('Bot is running!\n');
-}).listen(PORT, () => {
-    console.log(`🌐 Web server started successfully on port ${PORT}`);
-});
-
-// =========================
 // Settings
 // =========================
 
@@ -50,17 +34,45 @@ const AUTO_CHANNELS = [
     '1530724806754963456'
 ];
 
+const TOKEN = process.env.TOKEN;
+
 // =========================
-// Discord Connection Logs
+// Render Web Server
 // =========================
 
-client.once('ready', () => {
-    console.log('======================================');
-    console.log('✅ اتصل البوت بديسكورد بنجاح!');
-    console.log(`🤖 Bot: ${client.user.tag}`);
-    console.log(`🆔 ID: ${client.user.id}`);
-    console.log(`🌐 Servers: ${client.guilds.cache.size}`);
-    console.log('======================================');
+const PORT = process.env.PORT || 10000;
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8'
+    });
+
+    res.end('Discord Bot is running!\n');
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Web server started successfully on port ${PORT}`);
+});
+
+// =========================
+// Discord Debug
+// =========================
+
+client.on('debug', (info) => {
+    // لا نطبع معلومات حساسة كاملة
+    if (
+        info.includes('Provided token') ||
+        info.includes('Authorization')
+    ) {
+        console.log('🔐 Discord Debug: Token provided');
+        return;
+    }
+
+    console.log(`🔎 Discord Debug: ${info}`);
+});
+
+client.on('warn', (info) => {
+    console.log(`⚠️ Discord Warning: ${info}`);
 });
 
 client.on('error', (error) => {
@@ -69,17 +81,34 @@ client.on('error', (error) => {
 });
 
 client.on('shardError', (error) => {
-    console.error('❌ Discord Shard Error:');
+    console.error('❌ Discord Gateway Error:');
     console.error(error);
 });
 
-client.on('warn', (info) => {
-    console.warn('⚠️ Discord Warning:');
-    console.warn(info);
+client.on('shardDisconnect', (event, shardId) => {
+    console.log(`🔌 Discord disconnected. Shard: ${shardId}`);
+    console.log(event);
 });
 
-client.on('debug', (info) => {
-    console.log('🔍 Discord Debug:', info);
+client.on('shardReconnecting', (shardId) => {
+    console.log(`🔄 Discord reconnecting... Shard: ${shardId}`);
+});
+
+client.on('shardReady', (shardId) => {
+    console.log(`✅ Discord shard ${shardId} is ready!`);
+});
+
+// =========================
+// Bot Ready
+// =========================
+
+client.once('ready', () => {
+    console.log('====================================');
+    console.log('🤖 DISCORD BOT CONNECTED SUCCESSFULLY');
+    console.log(`👤 Bot: ${client.user.tag}`);
+    console.log(`🆔 Bot ID: ${client.user.id}`);
+    console.log(`🏠 Servers: ${client.guilds.cache.size}`);
+    console.log('====================================');
 });
 
 // =========================
@@ -87,6 +116,7 @@ client.on('debug', (info) => {
 // =========================
 
 client.on('interactionCreate', async (interaction) => {
+
     if (!interaction.isButton()) return;
 
     // =========================
@@ -94,58 +124,92 @@ client.on('interactionCreate', async (interaction) => {
     // =========================
 
     if (interaction.customId.startsWith('dl_')) {
+
         await interaction.deferReply({
             ephemeral: true
         });
 
         try {
+
             const parts = interaction.customId.split('_');
+
+            if (parts.length < 3) {
+                return interaction.editReply({
+                    content: '❌ بيانات زر التحميل غير صحيحة.'
+                });
+            }
 
             const channelId = parts[1];
             const messageId = parts[2];
 
-            const targetChannel =
-                await client.channels.fetch(channelId).catch(() => null);
+            const targetChannel = await client.channels
+                .fetch(channelId)
+                .catch(() => null);
 
             if (!targetChannel) {
                 return interaction.editReply({
-                    content: '❌ تعذر العثور على الشنل الأصلية.'
+                    content: '❌ تعذر العثور على الشنل.'
                 });
             }
 
-            const targetMessage =
-                await targetChannel.messages.fetch(messageId).catch(() => null);
-
-            let avatarUrl;
-            let bannerUrl;
-
-            if (
-                targetMessage &&
-                targetMessage.embeds.length > 0
-            ) {
-                avatarUrl =
-                    targetMessage.embeds[0].author?.iconURL();
-
-                bannerUrl =
-                    targetMessage.embeds[0].image?.url;
+            if (!targetChannel.isTextBased()) {
+                return interaction.editReply({
+                    content: '❌ هذه الشنل ليست نصية.'
+                });
             }
 
-            if (!avatarUrl || !bannerUrl) {
+            const targetMessage = await targetChannel.messages
+                .fetch(messageId)
+                .catch(() => null);
+
+            if (!targetMessage) {
+                return interaction.editReply({
+                    content: '❌ تعذر العثور على رسالة المعاينة.'
+                });
+            }
+
+            const attachments = Array.from(
+                targetMessage.attachments.values()
+            );
+
+            if (attachments.length < 2) {
+
                 return interaction.editReply({
                     content:
-                        '❌ عذراً، لم أستطع العثور على الافتار والبنر.'
+                        '❌ لم أجد الافتار والبنر الأصليين في الرسالة.'
                 });
             }
 
-            const dlAvatar = new AttachmentBuilder(
-                avatarUrl,
+            const avatarUrl = attachments[0].url;
+            const bannerUrl = attachments[1].url;
+
+            const avatarResponse = await fetch(avatarUrl);
+            const bannerResponse = await fetch(bannerUrl);
+
+            if (!avatarResponse.ok || !bannerResponse.ok) {
+                return interaction.editReply({
+                    content:
+                        '❌ تعذر تحميل الملفات الأصلية من Discord.'
+                });
+            }
+
+            const avatarBuffer = Buffer.from(
+                await avatarResponse.arrayBuffer()
+            );
+
+            const bannerBuffer = Buffer.from(
+                await bannerResponse.arrayBuffer()
+            );
+
+            const avatarFile = new AttachmentBuilder(
+                avatarBuffer,
                 {
                     name: 'avatar.gif'
                 }
             );
 
-            const dlBanner = new AttachmentBuilder(
-                bannerUrl,
+            const bannerFile = new AttachmentBuilder(
+                bannerBuffer,
                 {
                     name: 'banner.gif'
                 }
@@ -153,23 +217,23 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.editReply({
                 content:
-                    '**الافتار والبنر جاهزان للتحميل:**',
+                    '📥 **الافتار والبنر جاهزان للتحميل:**',
                 files: [
-                    dlAvatar,
-                    dlBanner
+                    avatarFile,
+                    bannerFile
                 ]
             });
 
         } catch (error) {
-            console.error(
-                '❌ Download Error:',
-                error
-            );
 
-            await interaction.editReply({
-                content:
-                    '❌ حدث خطأ أثناء تجهيز الملفات.'
-            }).catch(() => {});
+            console.error('❌ Download Error:', error);
+
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content:
+                        '❌ حدث خطأ أثناء تحميل الملفات.'
+                }).catch(() => {});
+            }
         }
 
         return;
@@ -180,23 +244,26 @@ client.on('interactionCreate', async (interaction) => {
     // =========================
 
     if (interaction.customId.startsWith('delete_')) {
+
         const ownerId =
-            interaction.customId.replace(
-                'delete_',
-                ''
-            );
+            interaction.customId.replace('delete_', '');
 
         if (interaction.user.id === ownerId) {
+
             await interaction.message
                 .delete()
                 .catch(() => {});
+
         } else {
+
             await interaction.reply({
                 content:
                     '❌ لا يمكنك حذف هذه المعاينة لأنك لست صاحب الأمر!',
                 ephemeral: true
-            });
+            }).catch(() => {});
         }
+
+        return;
     }
 });
 
@@ -205,68 +272,82 @@ client.on('interactionCreate', async (interaction) => {
 // =========================
 
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
 
-    // =========================
-    // Auto Channels
-    // =========================
+    try {
 
-    if (AUTO_CHANNELS.includes(message.channel.id)) {
-        const attachments =
-            Array.from(
-                message.attachments.values()
+        if (message.author.bot) return;
+
+        // =========================
+        // Automatic Channels
+        // =========================
+
+        if (AUTO_CHANNELS.includes(message.channel.id)) {
+
+            const attachments =
+                Array.from(message.attachments.values());
+
+            if (attachments.length < 2) return;
+
+            const avatarUrl = attachments[0].url;
+            const bannerUrl = attachments[1].url;
+
+            const avatarResponse = await fetch(avatarUrl);
+            const bannerResponse = await fetch(bannerUrl);
+
+            if (!avatarResponse.ok || !bannerResponse.ok) {
+
+                console.error(
+                    '❌ Failed to download Discord attachments.'
+                );
+
+                return;
+            }
+
+            const avatarBuffer = Buffer.from(
+                await avatarResponse.arrayBuffer()
             );
 
-        if (attachments.length < 2) return;
+            const bannerBuffer = Buffer.from(
+                await bannerResponse.arrayBuffer()
+            );
 
-        const avatarUrl =
-            attachments[0].url;
+            const avatarFile = new AttachmentBuilder(
+                avatarBuffer,
+                {
+                    name: 'avatar.gif'
+                }
+            );
 
-        const bannerUrl =
-            attachments[1].url;
+            const bannerFile = new AttachmentBuilder(
+                bannerBuffer,
+                {
+                    name: 'banner.gif'
+                }
+            );
 
-        try {
-            const avatarFile =
-                new AttachmentBuilder(
-                    avatarUrl,
-                    {
-                        name: 'avatar.gif'
-                    }
-                );
-
-            const bannerFile =
-                new AttachmentBuilder(
-                    bannerUrl,
-                    {
-                        name: 'banner.gif'
-                    }
-                );
-
-            const embed =
-                new EmbedBuilder()
-                    .setColor('#111214')
-                    .setAuthor({
-                        name:
-                            `👤 الملف الشخصي لـ ${message.author.username}`,
-                        iconURL:
-                            'attachment://avatar.gif'
-                    })
-                    .setDescription(
-                        '\u200b\n**[` البنر المتحرك `]**\n'
-                    )
-                    .setImage(
-                        'attachment://banner.gif'
-                    );
-
-            const avatarEmbed =
-                new EmbedBuilder()
-                    .setColor('#111214')
-                    .setDescription(
-                        '**[` الافتار الشخصي `]**'
-                    )
-                    .setImage(
+            const embed = new EmbedBuilder()
+                .setColor('#111214')
+                .setAuthor({
+                    name:
+                        `👤 الملف الشخصي لـ ${message.author.username}`,
+                    iconURL:
                         'attachment://avatar.gif'
-                    );
+                })
+                .setDescription(
+                    '\u200b\n**[` البنر المتحرك `]**\n'
+                )
+                .setImage(
+                    'attachment://banner.gif'
+                );
+
+            const avatarEmbed = new EmbedBuilder()
+                .setColor('#111214')
+                .setDescription(
+                    '**[` الافتار الشخصي `]**'
+                )
+                .setImage(
+                    'attachment://avatar.gif'
+                );
 
             const sentMessage =
                 await message.channel.send({
@@ -281,27 +362,26 @@ client.on('messageCreate', async (message) => {
                 });
 
             const row =
-                new ActionRowBuilder()
-                    .addComponents(
+                new ActionRowBuilder().addComponents(
 
-                        new ButtonBuilder()
-                            .setCustomId(
-                                `dl_${message.channel.id}_${sentMessage.id}`
-                            )
-                            .setEmoji('📥')
-                            .setStyle(
-                                ButtonStyle.Secondary
-                            ),
+                    new ButtonBuilder()
+                        .setCustomId(
+                            `dl_${message.channel.id}_${sentMessage.id}`
+                        )
+                        .setEmoji('📥')
+                        .setStyle(
+                            ButtonStyle.Secondary
+                        ),
 
-                        new ButtonBuilder()
-                            .setCustomId(
-                                `delete_${message.author.id}`
-                            )
-                            .setEmoji('🗑️')
-                            .setStyle(
-                                ButtonStyle.Secondary
-                            )
-                    );
+                    new ButtonBuilder()
+                        .setCustomId(
+                            `delete_${message.author.id}`
+                        )
+                        .setEmoji('🗑️')
+                        .setStyle(
+                            ButtonStyle.Secondary
+                        )
+                );
 
             await sentMessage.edit({
                 components: [row]
@@ -310,71 +390,63 @@ client.on('messageCreate', async (message) => {
             await message.delete()
                 .catch(() => {});
 
-        } catch (error) {
-            console.error(
-                '❌ Auto Channel Error:',
-                error
+            console.log(
+                `✅ Auto merge completed for ${message.author.tag}`
             );
+
+            return;
         }
 
-        return;
-    }
+        // =========================
+        // Manual !دمج
+        // =========================
 
-    // =========================
-    // Manual Command !دمج
-    // =========================
+        if (message.content.startsWith('!دمج')) {
 
-    if (message.content.startsWith('!دمج')) {
+            if (message.author.id !== OWNER_ID) {
 
-        if (message.author.id !== OWNER_ID) {
-            return message.reply(
-                '❌ عذراً، هذا الأمر مخصص حصرياً لصاحب البوت فقط!'
-            );
-        }
+                await message.reply({
+                    content:
+                        '❌ هذا الأمر مخصص لصاحب البوت فقط!'
+                });
 
-        const attachments =
-            Array.from(
-                message.attachments.values()
-            );
+                return;
+            }
 
-        if (attachments.length < 2) {
-            return message.reply(
-                '❌ من فضلك أرسل صورتين مع الأمر!'
-            );
-        }
+            const attachments =
+                Array.from(message.attachments.values());
 
-        const avatarUrl =
-            attachments[0].url;
+            if (attachments.length < 2) {
 
-        const bannerUrl =
-            attachments[1].url;
+                await message.reply({
+                    content:
+                        '❌ من فضلك أرسل صورتين مع الأمر!'
+                });
 
-        try {
-            const embed =
-                new EmbedBuilder()
-                    .setColor('#111214')
-                    .setAuthor({
-                        name:
-                            `👤 الملف الشخصي لـ ${message.author.username}`,
-                        iconURL:
-                            avatarUrl
-                    })
-                    .setDescription(
-                        '\u200b\n**[` البنر المتحرك `]**\n'
-                    )
-                    .setImage(
-                        bannerUrl
-                    );
+                return;
+            }
 
-            const avatarEmbed =
-                new EmbedBuilder()
-                    .setColor('#111214')
-                    .setDescription(
-                        '**[` الافتار الشخصي `]**'
-                    )
-                    .setImage(
-                        avatarUrl
-                    );
+            const avatarUrl = attachments[0].url;
+            const bannerUrl = attachments[1].url;
+
+            const embed = new EmbedBuilder()
+                .setColor('#111214')
+                .setAuthor({
+                    name:
+                        `👤 الملف الشخصي لـ ${message.author.username}`,
+                    iconURL: avatarUrl
+                })
+                .setDescription(
+                    '\u200b\n**[` البنر المتحرك `]**\n'
+                )
+                .setImage(bannerUrl);
+
+            const avatarEmbed = new EmbedBuilder()
+                .setColor('#111214')
+                .setDescription(
+                    '**[` الافتار الشخصي `]**'
+                )
+                .setImage(avatarUrl);
 
             const sentMessage =
                 await message.reply({
@@ -385,38 +457,42 @@ client.on('messageCreate', async (message) => {
                 });
 
             const row =
-                new ActionRowBuilder()
-                    .addComponents(
+                new ActionRowBuilder().addComponents(
 
-                        new ButtonBuilder()
-                            .setCustomId(
-                                `dl_${message.channel.id}_${sentMessage.id}`
-                            )
-                            .setEmoji('📥')
-                            .setStyle(
-                                ButtonStyle.Secondary
-                            ),
+                    new ButtonBuilder()
+                        .setCustomId(
+                            `dl_${message.channel.id}_${sentMessage.id}`
+                        )
+                        .setEmoji('📥')
+                        .setStyle(
+                            ButtonStyle.Secondary
+                        ),
 
-                        new ButtonBuilder()
-                            .setCustomId(
-                                `delete_${message.author.id}`
-                            )
-                            .setEmoji('🗑️')
-                            .setStyle(
-                                ButtonStyle.Secondary
-                            )
-                    );
+                    new ButtonBuilder()
+                        .setCustomId(
+                            `delete_${message.author.id}`
+                        )
+                        .setEmoji('🗑️')
+                        .setStyle(
+                            ButtonStyle.Secondary
+                        )
+                );
 
             await sentMessage.edit({
                 components: [row]
             });
 
-        } catch (error) {
-            console.error(
-                '❌ Manual Command Error:',
-                error
+            console.log(
+                `✅ !دمج executed by ${message.author.tag}`
             );
         }
+
+    } catch (error) {
+
+        console.error(
+            '❌ Message Handler Error:',
+            error
+        );
     }
 });
 
@@ -424,34 +500,33 @@ client.on('messageCreate', async (message) => {
 // Login
 // =========================
 
-const TOKEN = process.env.TOKEN;
-
-console.log(
-    `🔑 TOKEN موجود؟ ${!!TOKEN}`
-);
-
 if (!TOKEN) {
+
     console.error(
-        '❌ TOKEN غير موجود في Environment Variables'
+        '❌ ERROR: TOKEN غير موجود في Environment Variables في Render.'
     );
 
     process.exit(1);
 }
 
-console.log(
-    '🔌 جاري الاتصال بـ Discord...'
-);
+console.log('🔑 TOKEN موجود: true');
+console.log('🔌 جاري الاتصال بـ Discord...');
 
 client.login(TOKEN)
     .then(() => {
+
         console.log(
-            '⏳ تم إرسال طلب تسجيل الدخول إلى Discord، بانتظار الاتصال...'
+            '📡 Login request sent successfully.'
         );
+
     })
     .catch((error) => {
+
         console.error(
             '❌ فشل تسجيل الدخول إلى Discord:'
         );
 
         console.error(error);
+
+        process.exit(1);
     });
